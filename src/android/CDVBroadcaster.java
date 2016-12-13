@@ -94,7 +94,7 @@ public class CDVBroadcaster extends CordovaPlugin {
     }
 
 
-    private void fireNativeEvent( final String eventName, JSONObject userData ) {
+    private void fireNativeEvent(final String eventName, JSONObject userData) throws JSONException  {
         if( eventName == null ) {
             throw new IllegalArgumentException("eventName parameter is null!");
         }
