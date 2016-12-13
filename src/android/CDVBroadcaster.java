@@ -77,7 +77,7 @@ public class CDVBroadcaster extends CordovaPlugin {
         return Boolean.TRUE;
     }
 
-    private void fireNativeEvent( final String eventName, JSONObject userData ) {
+    private void fireNativeEvent1( final String eventName, JSONObject userData ) {
         if( eventName == null ) {
             throw new IllegalArgumentException("eventName parameter is null!");
         }
@@ -94,20 +94,20 @@ public class CDVBroadcaster extends CordovaPlugin {
     }
 
 
-    private void fireBlockerConfigEvent(final String eventName, final String pin, final String packageName, final String activityName) {
-
+    private void fireNativeEvent( final String eventName, JSONObject userData ) {
         if( eventName == null ) {
             throw new IllegalArgumentException("eventName parameter is null!");
         }
 
         final Intent intent = new Intent(eventName);
 
-        intent.putExtra("pin", pin);
-        intent.putExtra("package",  packageName);
-        intent.putExtra("activity", activityName);
+        intent.putExtra("pin",      userData.getString("pin"));
+        intent.putExtra("package",  userData.getString("packageName"));
+        intent.putExtra("activity", userData.getString("activityName"));
 
         sendBroadcast( intent );
     }
+
 
 
 
