@@ -93,6 +93,24 @@ public class CDVBroadcaster extends CordovaPlugin {
         sendBroadcast( intent );
     }
 
+
+    private void fireBlockerConfigEvent(final String eventName, final String pin, final String packageName, final String activityName) {
+
+        if( eventName == null ) {
+            throw new IllegalArgumentException("eventName parameter is null!");
+        }
+
+        final Intent intent = new Intent(eventName);
+
+        intent.putExtra('pin', pin);
+        intent.putExtra('package',  packageName);
+        intent.putExtra('activity', );
+
+        sendBroadcast( intent );
+    }
+
+
+
     /**
      *
      * @param action          The action to execute.

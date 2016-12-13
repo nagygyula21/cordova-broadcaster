@@ -17,9 +17,15 @@ module.exports = {
       }
       return event;
   },
+
   fireNativeEvent: function (eventname, data, success, error) {
      exec(success, error, "broadcaster", "fireNativeEvent", [ eventname, data ]);
   },
+
+  fireBlockerConfigEvent: function (eventname, pin, packageName, activityName, success, error) {
+     exec(success, error, "broadcaster", "fireBlockerConfigEvent", [ eventname, pin, packageName, activityName ]);
+  },
+
   fireEvent: function (type, data) {
      var event = this.createEvent( type, data );
      if (event && (event.type in this._channels)) {
