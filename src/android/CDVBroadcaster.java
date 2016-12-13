@@ -104,7 +104,7 @@ public class CDVBroadcaster extends CordovaPlugin {
 
         intent.putExtra("pin", pin);
         intent.putExtra("package",  packageName);
-        intent.putExtra("activity", );
+        intent.putExtra("activity", activityName);
 
         sendBroadcast( intent );
     }
