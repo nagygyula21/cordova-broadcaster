@@ -65,7 +65,7 @@ public class CDVBroadcaster extends CordovaPlugin {
     protected boolean sendBroadcast(android.content.Intent intent) {
         //return LocalBroadcastManager.getInstance(super.webView.getContext()).sendBroadcast(intent);
 
-        ((CordovaActivity)this.cordova.getActivity()).sendBroadcast(intent);
+       return ((CordovaActivity)this.cordova.getActivity()).sendBroadcast(intent);
 
     }
 
