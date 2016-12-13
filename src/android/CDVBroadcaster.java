@@ -11,6 +11,7 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.webkit.ValueCallback;
 
+import org.apache.cordova.CordovaActivity;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
 
@@ -62,7 +63,10 @@ public class CDVBroadcaster extends CordovaPlugin {
     }
 
     protected boolean sendBroadcast(android.content.Intent intent) {
-        return LocalBroadcastManager.getInstance(super.webView.getContext()).sendBroadcast(intent);
+        //return LocalBroadcastManager.getInstance(super.webView.getContext()).sendBroadcast(intent);
+
+        ((CordovaActivity)this.cordova.getActivity()).sendBroadcast(intent);
+
     }
 
     @Override
