@@ -10,145 +10,185 @@ import android.os.Bundle;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.webkit.ValueCallback;
-
 import org.apache.cordova.CordovaActivity;
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 /**
- * This class echoes a string called from JavaScript.
+ * @author nagygyula21
+ * forked from carlvorster/cordova-broadcaster
  */
 public class CDVBroadcaster extends CordovaPlugin {
 
-    public static final String USERDATA = "userdata";
-    private static String TAG =  CDVBroadcaster.class.getSimpleName();
+    // Log tag
+    private static String LOGTAG = CDVBroadcaster.class.getSimpleName();
+    // event name error string
+    public static final String EVENTNAME_ERROR = "--- ERROR --- EVENT NAME NULL OR EMPTY!";
+    // json object error string
+    public static final String JSON_ERROR = "--- ERROR --- NOT VALID JSON OBJECT!";
 
-    public static final String EVENTNAME_ERROR = "event name null or empty.";
+    // Actions
+    public static final String ACTION_NATIVE_EVENT = "fireNativeEvent";
+    public static final String ACTION_ADD_EVENT_LISTENER = "addEventListener";
+    public static final String ACTION_REMOVE_EVENT_LISTENER = "removeEventListener";
 
-    java.util.Map<String,BroadcastReceiver> receiverMap =
-                    new java.util.HashMap<String,BroadcastReceiver>(10);
+    // List of broadcast receivers
+    java.util.Map<String, BroadcastReceiver> receiverMap = new java.util.HashMap<String, BroadcastReceiver>();
 
     /**
-     *
-     * @param eventName
-     * @param jsonUserData
+     * Javascript FireEvent
+     * 
+     * @param eventName    - Broadcast intent action name
+     * @param jsonUserData - Broadcast extra json
      * @throws JSONException
      */
-    protected void fireEvent( final String eventName, final Object jsonUserData) throws JSONException {
+    protected void fireEvent(final String eventName, final Object jsonObject) throws JSONException {
+        String method = null;
 
-        String method = null; ;
-        if( jsonUserData != null ) {
-            final String data = String.valueOf(jsonUserData);
-            if (!(jsonUserData instanceof JSONObject)) {
-                final JSONObject json = new JSONObject(data); // CHECK IF VALID
+        // if valid json
+        if (jsonObject != null) {
+            final String data = String.valueOf(jsonObject);
+            if (!(jsonObject instanceof JSONObject)) {
+                // If not valid json object throw JSONException
+                final JSONObject json = new JSONObject(data);
             }
+            // with param
             method = String.format("window.broadcaster.fireEvent( '%s', %s );", eventName, data);
-        }
-        else {
+        } else {
+            // without param
             method = String.format("window.broadcaster.fireEvent( '%s', {} );", eventName);
         }
+
+        // send to browser
         sendJavascript(method);
     }
 
+    /**
+     * send to browser
+     * @param javascript
+     */
+    private void sendJavascript(final String javascript) {
+        webView.getView().post(new Runnable() {
+            @Override
+            public void run() {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                    webView.sendJavascript(javascript);
+                } else {
+                    webView.loadUrl("javascript:".concat(javascript));
+                }
+            }
+        });
+    }
+
+    /**
+     * Register a receiver
+     * 
+     * @param receiver BroadcastReceiver Object
+     * @param filter   Intent filter
+     */
     protected void registerReceiver(android.content.BroadcastReceiver receiver, android.content.IntentFilter filter) {
-        //LocalBroadcastManager.getInstance(super.webView.getContext()).registerReceiver(receiver,filter);
-        ((CordovaActivity)this.cordova.getActivity()).registerReceiver(receiver,filter);
+        ((CordovaActivity) this.cordova.getActivity()).registerReceiver(receiver, filter);
     }
 
+    /**
+     * Unregister a receiver
+     * 
+     * @param receiver BroadcastReceiver Object
+     */
     protected void unregisterReceiver(android.content.BroadcastReceiver receiver) {
-        //LocalBroadcastManager.getInstance(super.webView.getContext()).unregisterReceiver(receiver);
-        ((CordovaActivity)this.cordova.getActivity()).unregisterReceiver(receiver);
+        ((CordovaActivity) this.cordova.getActivity()).unregisterReceiver(receiver);
     }
 
+    /**
+     * Send broadcast message to the ether
+     * 
+     * @param intent
+     * @return
+     */
     protected boolean sendBroadcast(android.content.Intent intent) {
-        //return LocalBroadcastManager.getInstance(super.webView.getContext()).sendBroadcast(intent);
-
-       ((CordovaActivity)this.cordova.getActivity()).sendBroadcast(intent);
-       return true;
+        ((CordovaActivity) this.cordova.getActivity()).sendBroadcast(intent);
+        return true;
 
     }
 
     @Override
     public Object onMessage(String id, Object data) {
-
         try {
-            fireEvent( id, data );
+            fireEvent(id, data);
         } catch (JSONException e) {
-            Log.e(TAG, String.format("userdata [%s] for event [%s] is not a valid json object!", data, id));
+            Log.e(LOGTAG, String.format("userdata [%s] for event [%s] is not a valid json object!", data, id));
             return Boolean.FALSE;
         }
         return Boolean.TRUE;
     }
 
-    private void fireNativeEvent1( final String eventName, JSONObject userData ) {
-        if( eventName == null ) {
-            throw new IllegalArgumentException("eventName parameter is null!");
+    /**
+     * To android
+     * @param eventName
+     * @param userData
+     */
+    private void fireNativeEvent(final String eventName, JSONObject jsonObject) {
+        if (eventName == null) {
+            throw new IllegalArgumentException(EVENTNAME_ERROR);
         }
 
         final Intent intent = new Intent(eventName);
-
-        if( userData != null ) {
-            Bundle b = new Bundle();
-            b.putString(USERDATA, userData.toString());
-            intent.putExtras(b);
-        }
-
-        sendBroadcast( intent );
-    }
-
-
-    private void fireNativeEvent(final String eventName, JSONObject userData)  {
-        if( eventName == null ) {
-            throw new IllegalArgumentException("eventName parameter is null!");
-        }
-
-        System.out.println("eventName:" + eventName);
-        final Intent intent = new Intent(eventName);
-
+        // put extra
         try {
-            intent.putExtra("pin", userData.getString("pin"));
-            intent.putExtra("package", userData.getString("package"));
-            intent.putExtra("activity", userData.getString("activity"));
-
-            System.out.println("pin:" + userData.getString("pin"));
-            System.out.println("package:" + userData.getString("package"));
-            System.out.println("activity:" + userData.getString("activity"));
-
+            java.util.Iterator<String> keys = jsonObject.keys();
+            while(keys.hasNext()) {
+                String key = keys.next();
+                Object value = jsonObject.get(key);
+                
+                // put
+                if (value instanceof String) {
+                    intent.putExtra(key, String.valueOf(value));
+                }else if (value instanceof Integer) {
+                    intent.putExtra(key, Integer.valueOf((String)value));
+                }else if (value instanceof Float) {
+                    intent.putExtra(key, Float.valueOf((String)value));
+                }else if (value instanceof Boolean) {
+                    intent.putExtra(key, ((Boolean)value).booleanValue());
+                }
+            }
+        } catch (JSONException e) {
+            Log.e(LOGTAG, JSON_ERROR);
+        } catch (Exception ex) {
+            Log.e(LOGTAG, "cannot be cast");
         }
-        catch(JSONException e) {
 
-        }
-
-        sendBroadcast( intent );
+        sendBroadcast(intent);
     }
-
-
-
 
     /**
      *
      * @param action          The action to execute.
      * @param args            The exec() arguments.
-     * @param callbackContext The callback context used when calling back into JavaScript.
+     * @param callbackContext The callback context used when calling back into
+     *                        JavaScript.
      * @return
      * @throws JSONException
      */
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) throws JSONException {
-        if( action.equals("fireNativeEvent")) {
-
+        // To android
+        if (ACTION_NATIVE_EVENT.equals(action)) {
+            // evemnt name
             final String eventName = args.getString(0);
-            if( eventName==null || eventName.isEmpty() ) {
+
+            // not valid
+            if (eventName == null || eventName.isEmpty()) {
                 callbackContext.error(EVENTNAME_ERROR);
 
             }
+
+            // from arg
             final JSONObject userData = args.getJSONObject(1);
 
-
+            // thread
             cordova.getThreadPool().execute(new Runnable() {
                 @Override
                 public void run() {
@@ -158,64 +198,69 @@ public class CDVBroadcaster extends CordovaPlugin {
 
             callbackContext.success();
             return true;
-        }
-        else if (action.equals("addEventListener")) {
 
+        } else if (ACTION_ADD_EVENT_LISTENER.equals(action)) {
+            // Receive from android
+
+            // Event name
             final String eventName = args.getString(0);
+
+            // not valid event name
             if (eventName == null || eventName.isEmpty()) {
                 callbackContext.error(EVENTNAME_ERROR);
                 return false;
             }
+
+            // If not exists event
             if (!receiverMap.containsKey(eventName)) {
-
+                // create br
                 final BroadcastReceiver r = new BroadcastReceiver() {
-
                     @Override
                     public void onReceive(Context context, final Intent intent) {
-
                         final Bundle b = intent.getExtras();
-
                         // parse the JSON passed as a string.
                         try {
-
-                            String userData = "{}";
-                            if (b != null) {//  in some broadcast there might be no extra info
-                                userData = b.getString(USERDATA, "{}");
-                            } else {
-                                Log.v(TAG, "No extra information in intent bundle");
+                            JSONObject jsonObject = new JSONObject();
+                            if (b != null) {
+                                for (String key: b.keySet()) {
+                                    Object value = b.get(key);
+                                    jsonObject.put(key, value);
+                                }
                             }
-                            fireEvent(eventName, userData);
-
+                            fireEvent(eventName, jsonObject);
                         } catch (JSONException e) {
-                            Log.e(TAG, "'userdata' is not a valid json object!");
+                            Log.e(LOGTAG, JSON_ERROR);
                         }
-
                     }
                 };
 
+                // register
                 registerReceiver(r, new IntentFilter(eventName));
-
                 receiverMap.put(eventName, r);
             }
+
             callbackContext.success();
-
             return true;
-        } else if (action.equals("removeEventListener")) {
+        } else if (ACTION_REMOVE_EVENT_LISTENER.equals(action)) {
+            // unregister android
 
+            // Event name
             final String eventName = args.getString(0);
+
+            // Not valid event
             if (eventName == null || eventName.isEmpty()) {
                 callbackContext.error(EVENTNAME_ERROR);
                 return false;
             }
 
+            // remove map
             BroadcastReceiver r = receiverMap.remove(eventName);
 
+            // Unregister br
             if (r != null) {
-
                 unregisterReceiver(r);
-
-
             }
+
             callbackContext.success();
             return true;
         }
@@ -223,32 +268,14 @@ public class CDVBroadcaster extends CordovaPlugin {
     }
 
     /**
-     *
+     * Unregister all broadcast receiver
      */
     @Override
     public void onDestroy() {
-        // deregister receiver
-        for( BroadcastReceiver r : receiverMap.values() ) {
-                    unregisterReceiver(r);
+        for (BroadcastReceiver r : receiverMap.values()) {
+            unregisterReceiver(r);
         }
-
         receiverMap.clear();
-
         super.onDestroy();
-
-    }
-
-    @TargetApi(Build.VERSION_CODES.KITKAT)
-    private void sendJavascript(final String javascript) {
-        webView.getView().post(new Runnable() {
-           @Override
-           public void run() {
-               if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-                    webView.sendJavascript(javascript);
-                   } else {
-                    webView.loadUrl("javascript:".concat(javascript));
-                    }
-               }
-            });
     }
 }
